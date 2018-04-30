@@ -2,5 +2,5 @@
     <string name="app_name">CIS3515Lab9</string>
     <string name="searchIcon">Search</string>
     <string name="search_hint">Search stocks</string>
-    <string name="testing">TESTING STRING</string>
+    <string name="intro">Please add a stock</string>
 </resources>
