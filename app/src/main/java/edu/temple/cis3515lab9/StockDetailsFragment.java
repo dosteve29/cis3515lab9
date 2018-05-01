@@ -33,8 +33,7 @@ public class StockDetailsFragment extends Fragment {
     TextView companyName;
     TextView stockPrice;
     ImageView stockImage;
-    TextView updatedText;
-    Button updateButton;
+    TextView numberView;
     Bitmap bmp;
     View view;
 
@@ -42,7 +41,6 @@ public class StockDetailsFragment extends Fragment {
     public StockDetailsFragment() {
         // Required empty public constructor
     }
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,

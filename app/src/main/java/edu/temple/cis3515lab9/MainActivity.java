@@ -37,6 +37,9 @@ public class MainActivity extends AppCompatActivity implements PortfolioFragment
     String fileName = "myfile.json";
     File file;
 
+    MyService myService;
+    int position;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,9 +57,50 @@ public class MainActivity extends AppCompatActivity implements PortfolioFragment
         portfolioFragment = new PortfolioFragment();
         fragmentManager.beginTransaction().add(R.id.fragContainer, portfolioFragment).commit();
 
-        Intent serviceIntent = new Intent(MainActivity.this, MyService.class);
-        startService(serviceIntent);
     }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Intent serviceIntent = new Intent(this, MyService.class);
+        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unbindService(serviceConnection);
+    }
+
+    ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MyService.TestBinder binder = (MyService.TestBinder) service;
+            myService = binder.getService();
+            myService.doSomething(ServiceHandler);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+        }
+    };
+
+    Handler ServiceHandler = new Handler(new Handler.Callback() {
+        @Override
+        public boolean handleMessage(Message msg) {
+            StockDetailsFragment stockDetailsFragment;
+            if ((stockDetailsFragment = (StockDetailsFragment) fragmentManager.findFragmentByTag("Details")) != null){
+                JSONArray jsonArray = (JSONArray) msg.obj;
+                try {
+                    String newPrice = getString(R.string.price).concat(jsonArray.getJSONObject(position).getString("LastPrice"));
+                    stockDetailsFragment.stockPrice.setText(newPrice);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+            return false;
+        }
+    });
 
     //create the toolbar
     @Override
@@ -175,6 +219,7 @@ public class MainActivity extends AppCompatActivity implements PortfolioFragment
 
     @Override
     public void OnStockSelectedListener(int position){
+        this.position = position;
         JSONArray jsonArray = null;
 
         try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
