@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">주식매니저</string>
+    <string name="intro">주식을 첨부해주세요</string>
+    <string name="price">주식가격:</string>
+    <string name="search_hint">주식찾기</string>
+</resources>

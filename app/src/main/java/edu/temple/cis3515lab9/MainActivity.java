@@ -1,7 +1,11 @@
 package edu.temple.cis3515lab9;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
@@ -10,7 +14,9 @@ import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -24,9 +30,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements PortfolioFragment.OnStockSelectedListener{
     PortfolioFragment portfolioFragment;
-    StockDetailsFragment stockDetailsFragment;
+    FragmentManager fragmentManager;
 
     String fileName = "myfile.json";
     File file;
@@ -42,19 +48,15 @@ public class MainActivity extends AppCompatActivity {
         file = new File(getFilesDir(), fileName);
 
         //add the fragment to the container. fragContainer is present in all layouts
-        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager = getSupportFragmentManager();
 
         //this is the fragment that holds the list of stocks
         portfolioFragment = new PortfolioFragment();
         fragmentManager.beginTransaction().add(R.id.fragContainer, portfolioFragment).commit();
 
-        //detailsContainer may not be always there.
-        if (findViewById(R.id.detailsContainer) != null){
-            stockDetailsFragment = new StockDetailsFragment();
-            fragmentManager.beginTransaction().add(R.id.detailsContainer, stockDetailsFragment).commit();
-        }
+        Intent serviceIntent = new Intent(MainActivity.this, MyService.class);
+        startService(serviceIntent);
     }
-
 
     //create the toolbar
     @Override
@@ -68,9 +70,6 @@ public class MainActivity extends AppCompatActivity {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(final String query) { //when the user submits the text
-//                Toast.makeText(MainActivity.this, query, Toast.LENGTH_SHORT).show(); //TESTING SHOW THE INPUT STRING
-//                "http://dev.markitondemand.com/MODApis/Api/v2/Quote/json/?symbol=" //the api address
-
                 //create new thread for network operation
                 Thread thread = new Thread(){
                     @Override
@@ -122,6 +121,10 @@ public class MainActivity extends AppCompatActivity {
 
             //this is the json object passed to the handler
             JSONObject responseObject = (JSONObject) msg.obj;
+            if (!responseObject.has("Name")){
+                Toast.makeText(MainActivity.this, "No Stock found", Toast.LENGTH_SHORT).show();
+                return false;
+            }
             JSONArray jsonArray = null;
 
             //check if file is empty or not
@@ -157,7 +160,51 @@ public class MainActivity extends AppCompatActivity {
             } catch (java.io.IOException e) {
                 e.printStackTrace();
             }
+
+            portfolioFragment.stockAdapter.updateJSONArray(jsonArray);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    portfolioFragment.stockAdapter.notifyDataSetChanged();
+                    portfolioFragment.textView.setVisibility(View.GONE);
+                }
+            });
             return false;
         }
     });
+
+    @Override
+    public void OnStockSelectedListener(int position){
+        JSONArray jsonArray = null;
+
+        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
+            StringBuilder text = new StringBuilder();
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                text.append(line);
+                text.append('\n');
+            }
+            bufferedReader.close();
+            jsonArray = new JSONArray(text.toString());
+
+            StockDetailsFragment stockDetailsFragment = new StockDetailsFragment();
+            Bundle args = new Bundle();
+            args.putString("companyName", jsonArray.getJSONObject(position).getString("Name"));
+            args.putString("stockPrice", jsonArray.getJSONObject(position).getString("LastPrice"));
+            args.putString("symbol", jsonArray.getJSONObject(position).getString("Symbol"));
+            args.putString("updated", jsonArray.getJSONObject(position).getString("Timestamp"));
+            stockDetailsFragment.setArguments(args);
+
+            if (findViewById(R.id.detailsContainer) != null){
+                fragmentManager.beginTransaction().replace(R.id.detailsContainer, stockDetailsFragment, "Details").commit();
+            } else{
+                fragmentManager.beginTransaction().replace(R.id.fragContainer, stockDetailsFragment, "Details").addToBackStack(null).commit();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 }

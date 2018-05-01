@@ -6,11 +6,10 @@
     tools:context=".PortfolioFragment">
 
     <TextView
-        android:id="@+id/textView"
+        android:id="@+id/introHint"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:text="@string/intro"
         android:textAlignment="center" />
 
     <ListView
